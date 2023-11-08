@@ -1,11 +1,12 @@
 extern crate reqwest;
 use serde::Deserialize;
 use serde_json::Value;
+use serde_json::{self, json};
 #[derive(Deserialize)]
 
 pub struct Book {
     title: String,
-    author: Vec<String>,
+    authors: Vec<String>,
     pages: u64,
 }
 
@@ -15,7 +16,7 @@ impl std::fmt::Display for Book {
             f,
             "Title: {}, Author: {}, Pages: {}",
             self.title,
-            self.author.join(", "),
+            self.authors.join(", "),
             self.pages
         )
     }
@@ -27,7 +28,7 @@ pub async fn search(query: String) -> Result<String, reqwest::Error> {
         .text()
         .await?;
 
-    println!("{body}");
+    // println!("{body}");
     Ok(body)
 }
 
@@ -36,17 +37,19 @@ fn json_to_book(json: &Value) -> Book {
         .as_str()
         .expect("Could not convert title to string")
         .to_owned();
-    let authors_val = json["volumeInfo"]["authors"]
+
+    let authors = json["volumeInfo"]["authors"]
         .as_array()
-        .expect("Could not convert authors to vector of strings");
-    let authors = authors_val
+        .unwrap_or(&vec![json!("None")])
         .iter()
         .map(|v| v.to_string().to_owned())
         .collect();
+
     let pages = json["volumeInfo"]["pageCount"].as_u64().unwrap_or_default();
+
     Book {
         title,
-        author: authors,
+        authors,
         pages,
     }
 }
