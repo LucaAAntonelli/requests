@@ -27,17 +27,23 @@ pub async fn search(query: String) -> Result<String, reqwest::Error> {
         .text()
         .await?;
 
+    println!("{body}");
     Ok(body)
 }
 
 fn json_to_book(json: &Value) -> Book {
-    let title = json["volumeInfo"]["title"].as_str().unwrap().to_owned();
-    let authors_val = json["volumeInfo"]["authors"].as_array().unwrap();
+    let title = json["volumeInfo"]["title"]
+        .as_str()
+        .expect("Could not convert title to string")
+        .to_owned();
+    let authors_val = json["volumeInfo"]["authors"]
+        .as_array()
+        .expect("Could not convert authors to vector of strings");
     let authors = authors_val
         .iter()
         .map(|v| v.to_string().to_owned())
         .collect();
-    let pages = json["volumeInfo"]["pages"].as_u64().unwrap();
+    let pages = json["volumeInfo"]["pageCount"].as_u64().unwrap_or_default();
     Book {
         title,
         author: authors,
@@ -46,10 +52,10 @@ fn json_to_book(json: &Value) -> Book {
 }
 
 pub fn json_to_books(json: String) -> Vec<Book> {
-    let mut books: Vec<Book>;
+    let mut books: Vec<Book> = vec![];
     let collection: Value = serde_json::from_str(&json).expect("Failed to parse JSON");
     let items = &collection["items"].as_array();
-    for item in items.unwrap() {
+    for item in items.expect("Failed to iterate over JSON objects") {
         let book = json_to_book(item);
         books.push(book);
     }
